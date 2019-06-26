@@ -1,10 +1,28 @@
-secret_data/*
-secret_models/*
-secret_notebooks/*
-audioset/*
-.DS_Store
-.idea/
-.ipynb_checkpoints/
-*.ckpt
-*.npz
-*.pyc
+# General
+.env
+
+# Editors
+.vscode/
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+.installed.cfg
+*.egg
+.mypy_cache/
+
+# Backups
+*.bak*

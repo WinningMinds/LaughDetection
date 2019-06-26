@@ -3,23 +3,30 @@ from scipy.io import wavfile
 import tensorflow as tf
 import io
 
+import os
+
 import audioset.vggish_input as vggish_input
 import audioset.vggish_params as vggish_params
 import audioset.vggish_postprocess as vggish_postprocess
 import audioset.vggish_slim as vggish_slim
 
-PCA_PARAMS = 'audioset/vggish_pca_params.npz'
-VGG_CHECKPOINT = 'audioset/vggish_model.ckpt'
+root = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
+
+PCA_PARAMS = os.path.join(root, "vggish_pca_params.npz")
+VGG_CHECKPOINT = os.path.join(root, "vggish_model.ckpt")
+
 
 class VGGishEmbedder(object):
-
     def __init__(self, tfrecord_file=None):
         # Prepare a postprocessor to munge the model embeddings.
         self.pproc = vggish_postprocess.Postprocessor(PCA_PARAMS)
 
         # If needed, prepare a record writer to store the postprocessed embeddings.
-        self.writer = tf.python_io.TFRecordWriter(
-            tfrecord_file) if tfrecord_file else None
+        self.writer = (
+            tf.python_io.TFRecordWriter(tfrecord_file)
+            if tfrecord_file
+            else None
+        )
 
         self.graph = tf.Graph()
         self.sess = tf.Session()
@@ -30,10 +37,11 @@ class VGGishEmbedder(object):
         vggish_slim.define_vggish_slim(training=False)
         vggish_slim.load_vggish_slim_checkpoint(sess, VGG_CHECKPOINT)
         self.features_tensor = sess.graph.get_tensor_by_name(
-            vggish_params.INPUT_TENSOR_NAME)
+            vggish_params.INPUT_TENSOR_NAME
+        )
         self.embedding_tensor = sess.graph.get_tensor_by_name(
-            vggish_params.OUTPUT_TENSOR_NAME)
-
+            vggish_params.OUTPUT_TENSOR_NAME
+        )
 
     def convert_audio_to_embedding(self, wav_file):
         if not wav_file:
@@ -54,14 +62,18 @@ class VGGishEmbedder(object):
 
     def convert_waveform_to_embedding(self, waveform, sample_rate):
         samples = waveform / 32768.0  # Convert to [-1.0, +1.0]
-        examples_batch = vggish_input.waveform_to_examples(samples, sample_rate)
+        examples_batch = vggish_input.waveform_to_examples(
+            samples, sample_rate
+        )
         return self.convert_examples_to_embedding(examples_batch)
 
     def convert_examples_to_embedding(self, examples_batch):
         sess = self.sess
         # Run inference and postprocessing.
-        [embedding_batch] = sess.run([self.embedding_tensor],
-                                     feed_dict={self.features_tensor: examples_batch})
+        [embedding_batch] = sess.run(
+            [self.embedding_tensor],
+            feed_dict={self.features_tensor: examples_batch},
+        )
         postprocessed_batch = self.pproc.postprocess(embedding_batch)
 
         # Write the postprocessed embeddings as a SequenceExample, in a similar
@@ -73,15 +85,16 @@ class VGGishEmbedder(object):
             seq_example = tf.train.SequenceExample(
                 feature_lists=tf.train.FeatureLists(
                     feature_list={
-                        vggish_params.AUDIO_EMBEDDING_FEATURE_NAME:
-                            tf.train.FeatureList(
-                                feature=[
-                                    tf.train.Feature(
-                                        bytes_list=tf.train.BytesList(
-                                            value=[embedding.tobytes()]))
-                                    for embedding in postprocessed_batch
-                                ]
-                            )
+                        vggish_params.AUDIO_EMBEDDING_FEATURE_NAME: tf.train.FeatureList(
+                            feature=[
+                                tf.train.Feature(
+                                    bytes_list=tf.train.BytesList(
+                                        value=[embedding.tobytes()]
+                                    )
+                                )
+                                for embedding in postprocessed_batch
+                            ]
+                        )
                     }
                 )
             )
