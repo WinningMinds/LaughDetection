@@ -44,7 +44,7 @@ class VGGishEmbedder:  # pylint: disable=too-many-instance-attributes
 
         directory = os.path.dirname(os.path.realpath(__file__))
         self.pca_params = os.path.join(directory, "pca_params.npz")
-        self.vgg_checkpoint = os.path.join(directory, "model.cpkt")
+        self.vgg_checkpoint = os.path.join(directory, "model.ckpt")
 
         self.pproc = Postprocessor(self.pca_params)
 
